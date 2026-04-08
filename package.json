@@ -1,0 +1,23 @@
+{
+  "name": "botbtc",
+  "version": "1.0.0",
+  "description": "Bot BTC para Binance Testnet com Node.js, estratégia SMA cross, estado persistido e modo dry-run.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "binance",
+    "bitcoin",
+    "bot",
+    "trading",
+    "nodejs"
+  ],
+  "author": "MarceloSalada",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.14.0",
+    "dotenv": "^16.6.1"
+  }
+}
