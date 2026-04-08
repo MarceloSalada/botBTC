@@ -23,7 +23,6 @@ function formatMeta(meta) {
 function write(level, message, meta) {
   const line = `[${new Date().toISOString()}] [${level}] ${message}${formatMeta(meta)}`;
   console.log(line);
-
   if (config.logToFile) {
     ensureLogsDir();
     fs.appendFileSync(logFilePath, line + "\n", "utf-8");
@@ -31,13 +30,7 @@ function write(level, message, meta) {
 }
 
 module.exports = {
-  info(message, meta) {
-    write("INFO", message, meta);
-  },
-  warn(message, meta) {
-    write("WARN", message, meta);
-  },
-  error(message, meta) {
-    write("ERROR", message, meta);
-  },
+  info(message, meta) { write("INFO", message, meta); },
+  warn(message, meta) { write("WARN", message, meta); },
+  error(message, meta) { write("ERROR", message, meta); },
 };

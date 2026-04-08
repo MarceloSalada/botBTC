@@ -24,12 +24,10 @@ function ensureDataDir() {
 
 function loadState() {
   ensureDataDir();
-
   if (!fs.existsSync(stateFilePath)) {
     fs.writeFileSync(stateFilePath, JSON.stringify(defaultState, null, 2), "utf-8");
     return { ...defaultState };
   }
-
   try {
     const raw = fs.readFileSync(stateFilePath, "utf-8");
     return { ...defaultState, ...JSON.parse(raw) };
@@ -44,8 +42,4 @@ function saveState(state) {
   fs.writeFileSync(stateFilePath, JSON.stringify({ ...defaultState, ...state }, null, 2), "utf-8");
 }
 
-module.exports = {
-  loadState,
-  saveState,
-  stateFilePath,
-};
+module.exports = { loadState, saveState, stateFilePath };
