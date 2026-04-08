@@ -13,6 +13,11 @@ function parseNumber(value, defaultValue) {
   return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
+function parseForceSignal(value) {
+  const normalized = String(value || "NONE").toUpperCase();
+  return ["NONE", "BUY", "SELL"].includes(normalized) ? normalized : "NONE";
+}
+
 const config = {
   apiUrl: process.env.BINANCE_API_URL || "https://testnet.binance.vision",
   apiKey: process.env.BINANCE_API_KEY || "",
@@ -24,6 +29,8 @@ const config = {
   smaPeriod: parseNumber(process.env.BOT_SMA_PERIOD, 20),
   dryRun: parseBoolean(process.env.DRY_RUN, true),
   logToFile: parseBoolean(process.env.LOG_TO_FILE, true),
+  forceSignal: parseForceSignal(process.env.FORCE_SIGNAL),
+  forceSignalOnce: parseBoolean(process.env.FORCE_SIGNAL_ONCE, true),
 };
 
 function validateConfig() {

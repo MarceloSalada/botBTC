@@ -7,6 +7,7 @@ Bot modular em Node.js para Binance Spot Testnet.
 - lê candles e ticker do BTCUSDT
 - calcula SMA em candle fechado
 - gera sinal BUY / SELL / HOLD
+- permite sinal forçado para teste controlado
 - valida quantidade pelo `LOT_SIZE`
 - valida notional mínimo antes da ordem
 - persiste estado em `data/state.json`
@@ -43,6 +44,21 @@ cp .env.example .env
 ```bash
 npm start
 ```
+
+## Teste forçado
+
+No `.env`:
+
+```env
+FORCE_SIGNAL=BUY
+FORCE_SIGNAL_ONCE=true
+DRY_RUN=true
+```
+
+Valores aceitos para `FORCE_SIGNAL`:
+- `NONE`
+- `BUY`
+- `SELL`
 
 ## Segurança
 

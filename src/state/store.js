@@ -13,6 +13,7 @@ const defaultState = {
   lastCandleTime: null,
   lastQuantity: null,
   lastNotional: null,
+  forceSignalConsumed: false,
 };
 
 function ensureDataDir() {

@@ -27,6 +27,8 @@ async function bootstrap() {
     intervalMs: config.intervalMs,
     smaPeriod: config.smaPeriod,
     dryRun: config.dryRun,
+    forceSignal: config.forceSignal,
+    forceSignalOnce: config.forceSignalOnce,
     currentTickerPrice: tickerPrice,
     baseAsset: exchangeInfoCache.baseAsset,
     quoteAsset: exchangeInfoCache.quoteAsset,
@@ -37,6 +39,28 @@ async function bootstrap() {
       exchangeInfoCache?.filters?.find((item) => item.filterType === "MIN_NOTIONAL") ||
       null,
   });
+}
+
+function applyForcedSignal(signal, state) {
+  if (config.forceSignal === "NONE") {
+    if (state.forceSignalConsumed) {
+      state.forceSignalConsumed = false;
+    }
+    return signal;
+  }
+
+  if (config.forceSignalOnce && state.forceSignalConsumed) {
+    return signal;
+  }
+
+  const forced = {
+    ...signal,
+    action: config.forceSignal,
+    reason: `Sinal forçado manualmente via .env (${config.forceSignal}).`,
+    forced: true,
+  };
+
+  return forced;
 }
 
 async function executeCycle() {
@@ -52,12 +76,13 @@ async function executeCycle() {
     const limit = Math.max(config.smaPeriod + 3, 25);
     const klines = await getKlines(config.symbol, config.timeframe, limit);
     const tickerPrice = await getTickerPrice(config.symbol);
-    const signal = buildSignal({
+    const baseSignal = buildSignal({
       klines,
       smaPeriod: config.smaPeriod,
       inPosition: state.inPosition,
     });
 
+    const signal = applyForcedSignal(baseSignal, state);
     const candleAlreadyProcessed = state.lastCandleTime === signal.latestCloseTime;
     const normalized = normalizeQuantity(config.quantity, exchangeInfoCache);
     const notionalCheck = validateNotional(signal.latestClose, normalized.quantityNumber, exchangeInfoCache);
@@ -70,6 +95,7 @@ async function executeCycle() {
       previousSma: Number(signal.previousSma.toFixed(2)),
       action: signal.action,
       reason: signal.reason,
+      forced: Boolean(signal.forced),
       inPosition: state.inPosition,
       candleAlreadyProcessed,
       requestedQuantity: config.quantity,
@@ -78,7 +104,7 @@ async function executeCycle() {
       minNotionalRequired: Number(notionalCheck.minNotional.toFixed(2)),
     });
 
-    if (candleAlreadyProcessed) {
+    if (candleAlreadyProcessed && !signal.forced) {
       return;
     }
 
@@ -105,6 +131,7 @@ async function executeCycle() {
     if (config.dryRun) {
       logger.warn("DRY_RUN ativo: nenhuma ordem real foi enviada.", {
         intendedAction: signal.action,
+        forced: Boolean(signal.forced),
         symbol: config.symbol,
         requestedQuantity: config.quantity,
         normalizedQuantity: normalized.quantity,
@@ -120,6 +147,7 @@ async function executeCycle() {
         status: order.status,
         executedQty: order.executedQty,
         transactTime: order.transactTime,
+        forced: Boolean(signal.forced),
       });
     }
 
@@ -128,6 +156,11 @@ async function executeCycle() {
     state.lastOrderAt = new Date().toISOString();
     state.lastQuantity = normalized.quantity;
     state.lastNotional = Number(notionalCheck.notional.toFixed(2));
+
+    if (signal.forced && config.forceSignalOnce) {
+      state.forceSignalConsumed = true;
+    }
+
     saveState(state);
   } catch (error) {
     logger.error("Erro no ciclo do bot", {

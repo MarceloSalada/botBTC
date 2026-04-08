@@ -9,6 +9,7 @@ Este projeto é um bot modular em Node.js para Binance Testnet.
 - persiste o estado local em `data/state.json`
 - grava logs em `logs/bot.log`
 - usa cruzamento de preço com SMA em candle fechado
+- permite forçar BUY/SELL para teste controlado
 - valida quantidade pelo `stepSize`
 - valida notional mínimo antes da ordem
 - mostra ticker atual no startup
@@ -56,6 +57,8 @@ BOT_TIMEFRAME=15m
 BOT_SMA_PERIOD=20
 DRY_RUN=true
 LOG_TO_FILE=true
+FORCE_SIGNAL=NONE
+FORCE_SIGNAL_ONCE=true
 ```
 
 ## Como rodar
@@ -79,6 +82,30 @@ Assim o bot:
 - grava log
 - valida filtros
 - mas não manda ordem real
+
+## Teste forçado
+
+Para forçar um BUY controlado:
+
+```env
+FORCE_SIGNAL=BUY
+FORCE_SIGNAL_ONCE=true
+DRY_RUN=true
+```
+
+Para forçar um SELL controlado:
+
+```env
+FORCE_SIGNAL=SELL
+FORCE_SIGNAL_ONCE=true
+DRY_RUN=true
+```
+
+Depois do teste, volte para:
+
+```env
+FORCE_SIGNAL=NONE
+```
 
 ## Quando quiser enviar ordem real na testnet
 
