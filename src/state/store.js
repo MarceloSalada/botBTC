@@ -11,6 +11,8 @@ const defaultState = {
   lastPrice: null,
   lastSignal: null,
   lastCandleTime: null,
+  lastQuantity: null,
+  lastNotional: null,
 };
 
 function ensureDataDir() {

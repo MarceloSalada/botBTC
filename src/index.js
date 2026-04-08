@@ -1,15 +1,25 @@
 const { config, validateConfig } = require("./config/env");
 const logger = require("./utils/logger");
 const { loadState, saveState } = require("./state/store");
-const { getKlines, getExchangeInfo, placeMarketOrder } = require("./services/binance");
+const {
+  getKlines,
+  getExchangeInfo,
+  getTickerPrice,
+  getAccountInfo,
+  placeMarketOrder,
+} = require("./services/binance");
 const { buildSignal } = require("./strategy/smaCross");
+const { normalizeQuantity, validateNotional, extractBalances } = require("./utils/trading");
 
 let isProcessing = false;
+let exchangeInfoCache = null;
 
 async function bootstrap() {
   validateConfig();
 
-  const exchangeInfo = await getExchangeInfo(config.symbol);
+  exchangeInfoCache = await getExchangeInfo(config.symbol);
+  const tickerPrice = await getTickerPrice(config.symbol);
+  const balances = extractBalances(await getAccountInfo(), [exchangeInfoCache.baseAsset, exchangeInfoCache.quoteAsset]);
 
   logger.info("Bot inicializado", {
     symbol: config.symbol,
@@ -17,7 +27,15 @@ async function bootstrap() {
     intervalMs: config.intervalMs,
     smaPeriod: config.smaPeriod,
     dryRun: config.dryRun,
-    lotSizeFilter: exchangeInfo?.filters?.find((item) => item.filterType === "LOT_SIZE") || null,
+    currentTickerPrice: tickerPrice,
+    baseAsset: exchangeInfoCache.baseAsset,
+    quoteAsset: exchangeInfoCache.quoteAsset,
+    balances,
+    lotSizeFilter: exchangeInfoCache?.filters?.find((item) => item.filterType === "LOT_SIZE") || null,
+    notionalFilter:
+      exchangeInfoCache?.filters?.find((item) => item.filterType === "NOTIONAL") ||
+      exchangeInfoCache?.filters?.find((item) => item.filterType === "MIN_NOTIONAL") ||
+      null,
   });
 }
 
@@ -33,6 +51,7 @@ async function executeCycle() {
     const state = loadState();
     const limit = Math.max(config.smaPeriod + 3, 25);
     const klines = await getKlines(config.symbol, config.timeframe, limit);
+    const tickerPrice = await getTickerPrice(config.symbol);
     const signal = buildSignal({
       klines,
       smaPeriod: config.smaPeriod,
@@ -40,8 +59,11 @@ async function executeCycle() {
     });
 
     const candleAlreadyProcessed = state.lastCandleTime === signal.latestCloseTime;
+    const normalized = normalizeQuantity(config.quantity, exchangeInfoCache);
+    const notionalCheck = validateNotional(signal.latestClose, normalized.quantityNumber, exchangeInfoCache);
 
     logger.info("Leitura de mercado", {
+      tickerPrice,
       latestClose: signal.latestClose,
       previousClose: signal.previousClose,
       currentSma: Number(signal.currentSma.toFixed(2)),
@@ -50,6 +72,10 @@ async function executeCycle() {
       reason: signal.reason,
       inPosition: state.inPosition,
       candleAlreadyProcessed,
+      requestedQuantity: config.quantity,
+      normalizedQuantity: normalized.quantity,
+      estimatedNotional: Number(notionalCheck.notional.toFixed(2)),
+      minNotionalRequired: Number(notionalCheck.minNotional.toFixed(2)),
     });
 
     if (candleAlreadyProcessed) {
@@ -65,26 +91,43 @@ async function executeCycle() {
       return;
     }
 
+    if (!notionalCheck.isValid) {
+      logger.warn("Sinal encontrado, mas a ordem foi bloqueada por notional insuficiente.", {
+        action: signal.action,
+        estimatedNotional: notionalCheck.notional,
+        minNotionalRequired: notionalCheck.minNotional,
+        normalizedQuantity: normalized.quantity,
+      });
+      saveState(state);
+      return;
+    }
+
     if (config.dryRun) {
       logger.warn("DRY_RUN ativo: nenhuma ordem real foi enviada.", {
         intendedAction: signal.action,
         symbol: config.symbol,
-        quantity: config.quantity,
+        requestedQuantity: config.quantity,
+        normalizedQuantity: normalized.quantity,
+        estimatedNotional: Number(notionalCheck.notional.toFixed(2)),
+        referencePrice: signal.latestClose,
       });
     } else {
       const side = signal.action === "BUY" ? "BUY" : "SELL";
-      const order = await placeMarketOrder(config.symbol, config.quantity, side);
+      const order = await placeMarketOrder(config.symbol, normalized.quantity, side);
       logger.info("Ordem executada", {
         orderId: order.orderId,
         side: order.side,
         status: order.status,
         executedQty: order.executedQty,
+        transactTime: order.transactTime,
       });
     }
 
     state.inPosition = signal.action === "BUY";
     state.lastSide = signal.action;
     state.lastOrderAt = new Date().toISOString();
+    state.lastQuantity = normalized.quantity;
+    state.lastNotional = Number(notionalCheck.notional.toFixed(2));
     saveState(state);
   } catch (error) {
     logger.error("Erro no ciclo do bot", {

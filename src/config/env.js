@@ -33,10 +33,8 @@ function validateConfig() {
   if (!config.symbol) missing.push("BOT_SYMBOL");
   if (!config.quantity) missing.push("BOT_QUANTITY");
 
-  if (!config.dryRun) {
-    if (!config.apiKey) missing.push("BINANCE_API_KEY");
-    if (!config.secretKey) missing.push("BINANCE_SECRET_KEY");
-  }
+  if (!config.apiKey) missing.push("BINANCE_API_KEY");
+  if (!config.secretKey) missing.push("BINANCE_SECRET_KEY");
 
   if (missing.length > 0) {
     throw new Error(`Configuração ausente: ${missing.join(", ")}`);

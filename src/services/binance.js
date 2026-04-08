@@ -35,6 +35,27 @@ async function getExchangeInfo(symbol) {
   return data.symbols?.[0] || null;
 }
 
+async function getTickerPrice(symbol) {
+  const { data } = await client.get("/api/v3/ticker/price", {
+    params: { symbol },
+  });
+
+  return Number(data.price);
+}
+
+async function getAccountInfo() {
+  const timestamp = await getServerTime();
+  const params = { timestamp };
+  const signature = signParams(params);
+
+  const { data } = await client.get("/api/v3/account", {
+    params: { ...params, signature },
+    headers: { "X-MBX-APIKEY": config.apiKey },
+  });
+
+  return data;
+}
+
 async function placeMarketOrder(symbol, quantity, side) {
   const timestamp = await getServerTime();
   const params = {
@@ -61,5 +82,7 @@ async function placeMarketOrder(symbol, quantity, side) {
 module.exports = {
   getKlines,
   getExchangeInfo,
+  getTickerPrice,
+  getAccountInfo,
   placeMarketOrder,
 };

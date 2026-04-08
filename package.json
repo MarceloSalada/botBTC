@@ -1,7 +1,7 @@
 {
   "name": "botbtc",
-  "version": "1.0.0",
-  "description": "Bot BTC para Binance Testnet com Node.js, estratégia SMA cross, estado persistido e modo dry-run.",
+  "version": "1.1.0",
+  "description": "Bot BTC para Binance Testnet com Node.js, estratégia SMA cross, validação de filtros, estado persistido e modo dry-run.",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

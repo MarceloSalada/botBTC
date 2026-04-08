@@ -9,6 +9,9 @@ Este projeto é um bot modular em Node.js para Binance Testnet.
 - persiste o estado local em `data/state.json`
 - grava logs em `logs/bot.log`
 - usa cruzamento de preço com SMA em candle fechado
+- valida quantidade pelo `stepSize`
+- valida notional mínimo antes da ordem
+- mostra ticker atual no startup
 
 ## Estrutura
 
@@ -24,6 +27,7 @@ src/
     smaCross.js
   utils/
     logger.js
+    trading.js
   index.js
 ```
 
@@ -73,9 +77,10 @@ Assim o bot:
 - gera sinal
 - salva estado
 - grava log
+- valida filtros
 - mas não manda ordem real
 
-## Quando quiser enviar ordem real
+## Quando quiser enviar ordem real na testnet
 
 Troque no `.env`:
 
@@ -89,11 +94,11 @@ DRY_RUN=false
 - o estado local não vai para o GitHub
 - o último candle já em formação não é usado como gatilho
 - o bot evita reprocessar o mesmo candle fechado
+- o preço usado pelo bot é o preço dinâmico do mercado, não um valor fixo no código
 
 ## Próximos passos possíveis
 
 - validar saldo antes da ordem
-- validar filtros de quantidade da Binance
 - adicionar stop loss e take profit
 - trocar polling por websocket
 - adicionar backtest simples
